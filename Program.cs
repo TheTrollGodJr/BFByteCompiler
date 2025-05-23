@@ -3,6 +3,10 @@ using System.IO;
 
 static class Program
 {
+    static int[] arr = {};
+    static int ptr = 0;
+    static Stack<int?> st = new Stack<int?>();
+
     static void Main(string[] args)
     {
         if (args.Length == 0) return;
@@ -25,14 +29,19 @@ static class Program
     static bool ExecuteBytecode(string inFile)
     {
         byte[] data = File.ReadAllBytes(inFile);
+        string code = "";
 
         foreach (byte b in data)
         {
             int high = (b & 0xF0) >> 4;
             int low = b & 0x0F;
 
-            Console.Write($"{FromHex[high]}{FromHex[low]}");
+            //Console.Write($"{FromHex[high]}{FromHex[low]}");
+            code += $"{FromHex[high]}{FromHex[low]}";
         }
+
+        RunCode(code);
+
         return true;
     }
 
@@ -48,7 +57,7 @@ static class Program
                 data += line;
                 line = sr.ReadLine();
             }
-            Console.WriteLine("Got data");
+            //Console.WriteLine("Got data");
             return data;
         }
         catch
@@ -73,11 +82,11 @@ static class Program
             int low = i + 1 < data.Length ? ToHex[data[i + 1]] : 0x0;
             output.Add((byte)((high << 4) | low));
             //}
-            Console.WriteLine("Got byte");
+            //Console.WriteLine("Got byte");
         }
 
         File.WriteAllBytes(outFile, output.ToArray());
-        Console.WriteLine("Finished");
+        //Console.WriteLine("Finished");
         return true;
     }
 
@@ -106,6 +115,50 @@ static class Program
         [0x7] = '<',
         [0x8] = '>'
     };
+
+
+    static void RunCode(string code)
+    {
+        Console.Write("\n\n");
+        for (int i = 0; i < code.Length; i++)
+        {
+            switch (code[i])
+            {
+                case '>':
+                    ptr++;
+                    while (ptr > arr.Length) arr.Append(0);
+                    break;
+                case '<':
+                    if (ptr != 0) ptr--;
+                    break;
+                case '[':
+                    if (code[ptr] > 0) st.Push(ptr);
+                    break;
+                case ']':
+                    int? loopFront = st.Peek();
+                    if (loopFront == null) continue;
+                    ptr = (int)(loopFront - 1);
+                    i = (int)(loopFront - 1);
+                    break;
+                case '+':
+                    if (arr[i] >= 255) arr[i] = 0;
+                    else arr[i]++;
+                    break;
+                case '-':
+                    if (arr[i] <= 0) arr[i] = 255;
+                    else arr[i]--;
+                    break;
+                case ',':
+                    char key = Console.ReadKey(true).KeyChar;
+                    arr[i] = key;
+                    break;
+                case '.':
+                    Console.Write((char)arr[i]);
+                    break;
+            }
+        }
+    }
+
 }
 
 //. , [ ] + - < > s
@@ -126,3 +179,6 @@ static class Program
 /// 1101
 /// 1110
 /// 1111
+/// 
+
+
